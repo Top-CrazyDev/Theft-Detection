@@ -1,0 +1,150 @@
+<!-- templates/base.html -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Theft Detection</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='index.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<body>
+    <div class="header-container">
+        <div class="header-title-wrapper">
+            <div class="header-title">Catalytic Converter Theft Detection System</div>
+        </div>
+        <div class="button-wrapper">
+            <button id="open">Open Camera</button>
+            <button id="close">Close Camera</button>
+        </div>
+    </div>
+    <div>
+        <div style="position:absolute">
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            {% for message in messages %}
+            <div class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true" style="opacity:1">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        {{ message }}
+                    </div>
+                    <button type="button" class="x btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+        <div class="video-container">
+            <img src="../static/camera.png" id="imageframe" class="image-show" onmessage="handleMessage(event)"/>
+        </div>
+        <div id="load-wrapper">
+            <div class="spinner-border text-primary center" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div id="Start-Wrapper">
+            <div class="time-limit">
+                <label for="customRange2" id = "showsettime" class="form-label" style="color:white">Set Time of Detection : 30s</label>
+                <input type="range" class="form-range" min="0" max="60" id="customRange2">
+            </div>
+            <div class="StartBtnWrapper">
+                <button id="StartDetect">Start Detection</button>
+            </div>
+        </div>
+        <div id="Stop-Wrapper">
+            <div class = "timeLabelWrapper">
+                <label id = "showtime"></label>
+            </div>
+            <div class = "StopBtnWrapper">
+                <button id = "StopDetect">Stop Detection</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const btn = document.getElementsByClassName("x");
+        for(var i = 0; i < btn.length; i++){
+            btn[i].addEventListener('click',function(event){
+                event.target.parentNode.parentNode.style.display = "none";
+            });
+        }
+        var limitTime;
+        document.getElementById("customRange2").addEventListener('change',function(event){
+            limitTime = event.target.value;
+            document.getElementById("showsettime").innerHTML = "Set Time of Detection : " + limitTime + "s";
+        });
+        document.getElementById("close").style.display = "none";
+        document.getElementById("Stop-Wrapper").style.display="none";
+        document.getElementById("Start-Wrapper").style.display="none";
+        document.getElementById("open").addEventListener('click',function(){
+            document.getElementById("close").style.display="block";
+            event.target.style.display = "none";
+            document.getElementById("imageframe").src="{{ url_for('video_feed') }}";
+            document.getElementById("Start-Wrapper").style.display="flex";
+            document.getElementById("Stop-Wrapper").style.display="none";
+        });
+        document.getElementById("close").addEventListener('click',function(){
+            document.getElementById("open").style.display="block";
+            event.target.style.display = "none";
+            document.getElementById("imageframe").src="../static/camera.png";
+            document.getElementById("Start-Wrapper").style.display="none";
+            document.getElementById("Stop-Wrapper").style.display="none";
+        });
+        document.getElementById("StartDetect").addEventListener('click',function(){
+            limitTime = document.getElementById("customRange2").value;
+            var url = '/detectionStart';
+            var data = {
+                limit: limitTime,
+            };
+            fetch(url, {
+                method: 'POST',  // Use 'POST' for sending data
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),  // Convert data to JSON
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("Start-Wrapper").style.display="none";
+                document.getElementById("imageframe").src="{{ url_for('theft_detection') }}";
+                document.getElementById("imageframe").style.display="none";
+                document.getElementById("load-wrapper").style.display = "block";
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+        document.getElementById("StopDetect").addEventListener('click',function(){
+            document.getElementById("Start-Wrapper").style.display="flex";
+            document.getElementById("Stop-Wrapper").style.display="none";
+            document.getElementById("imageframe").src="{{ url_for('video_feed') }}";
+        });
+        
+        document.getElementById("imageframe").addEventListener('load',function(event){
+            if(event.target.src == "http://localhost:5000/theft_detection"){
+                document.getElementById("load-wrapper").style.display="none";
+                event.target.style.display="block";
+                document.getElementById("Stop-Wrapper").style.display="flex";
+                document.getElementById("showtime").innerHTML = "Time of Detection :" + limitTime + "s";
+            }
+        });
+        function handleMessage(event) {
+            const responseText = event.data;
+    
+             Split the response by the custom data field
+            var parts = event.data.split('\r\n');
+            console.log("parts");
+            if (parts.length === 5) {
+                const customString = parts[4];
+                alert(customString);
+            }
+        }
+    </script>
+    <script src="{{ url_for('static',filename="bootstrap.min.js")}}"></script>
+
+</body>
+
+</html>
